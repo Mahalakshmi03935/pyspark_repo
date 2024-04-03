@@ -61,6 +61,6 @@ all_models_customers = purchase_data_df.groupBy("customer").agg({"product_model"
 print("Customers who have bought all models in the new Product Data:")
 all_models_customers.show()
 
-# Stop SparkSession
+
 spark.stop()
 
