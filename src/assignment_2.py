@@ -1,47 +1,62 @@
-# Importing libraries
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, udf
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.functions import udf
 
-# Created a SparkSession
-spark = SparkSession.builder.appName("Data") .getOrCreate()
+# Define your dataset and schema
+Dataset = [
+    ("1234567891234567",),
+    ("5678912345671234",),
+    ("9123456712345678",),
+    ("1234567812341122",),
+    ("1234567812341342",)
+]
 
-#Creating a DataFrame
-data = [("1234567891234567",),
-        ("5678912345671234",),
-        ("9123456712345678",),
-        ("1234567812341122",),
-        ("1234567812341342",)]
+credit_card_df_schema = (
+    StructType([
+        StructField("card_number", StringType())
+    ])
+)
 
-# Create DataFrame
-credit_card_df = spark.createDataFrame(data, ["card_number"])
-print("displaying credit card dataframe")
+# Create SparkSession
+spark = SparkSession.builder.appName('data').getOrCreate()
+
+# Create DataFrame from dataset with defined schema
+credit_card_df = spark.createDataFrame(data=Dataset, schema=credit_card_df_schema)
+
+# Show DataFrame
 credit_card_df.show()
 
-# Print number of partitions
-print("No. of partitions :", credit_card_df.rdd.getNumPartitions())
+# Reading CSV file with inferSchema
+credit_card_df = spark.read.csv("C:/Users/RajaMahalakshmiB/Desktop/pyspark_folder/pyspark_repo/resources/credit_card_number.csv", header=True, inferSchema=True)
+credit_card_df.show()
+credit_card_df.printSchema()
 
-# Increase the partition size to 5
-credit_card_df = credit_card_df.repartition(5)
-print("After increasing the partition size to 5:",credit_card_df.show())
+
+
+# Print number of partitions
+number_of_partition = credit_card_df_schema.rdd.getNumPartitions()
+print("Number of partitions before repartitioning:", number_of_partition)
+
+# Increase the partition by 5
+increase_partition = credit_card_df_schema.repartition(number_of_partition + 5)
+increase_partition1 = increase_partition.getNumPartitions()
+print("Print increased partition: ", increase_partition1)
 
 # Decrease the partition size back to its original partition size
-credit_card_df = credit_card_df.coalesce(credit_card_df.rdd.getNumPartitions())
-print("After decreasing the partition size back to its original partition size:",credit_card_df.show())
+decrease_partition = increase_partition.coalesce(number_of_partition)
+decrease_partition1 = decrease_partition.getNumPartitions()
+print("Back to its original partition size: ", decrease_partition1)
 
-# Creating a UDF to mask the card numbers
-def mask_card_number(card_number):
-    return '*' * 12 + card_number[-4:]
+# Define UDF function to mask card numbers
+def masked_card_number(card_number):
+    masked_character = len(card_number) - 4
+    masked_number = ('*' * masked_character) + card_number[-4:]
+    return masked_number
 
-mask_card_number_udf = udf(mask_card_number, StringType())
-print("Mask the card numbers:",mask_card_number_udf)
+# Register UDF
+credit_card_udf = udf(masked_card_number, StringType())
 
-# Apply UDF to create masked_card_number column
-credit_card_df = credit_card_df.withColumn("masked_card_number", mask_card_number_udf(col("card_number")))
-print("applying udf to create masked_card_number col:",credit_card_df.show())
-# Show the final DataFrame with masked card numbers
-credit_card_df.show(truncate=False)
-
-# Stop the SparkSession
-spark.stop()
+# Add masked_card_number column using UDF
+credit_card_df_udf = credit_card_df_schema.withColumn("masked_card_number", credit_card_udf(credit_card_df_schema['card_number']))
+credit_card_df_udf.show()
 
