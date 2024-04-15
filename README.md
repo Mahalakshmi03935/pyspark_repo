@@ -6,6 +6,7 @@ Libraries Used:
 PySpark: This library allows us to process large datasets efficiently using distributed computing.
 
 Functions Used:
+
 1.countDistinct(): Counts unique items in a dataset.
 
 2.filter(): Selects specific rows based on certain conditions.
